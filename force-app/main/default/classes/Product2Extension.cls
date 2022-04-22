@@ -44,8 +44,13 @@ public without sharing class Product2Extension {
             && forProduct.pricebookEntryRecord.UnitPrice != null
             && forProduct.pricebookEntryRecord.UnitPrice > 0
             && forProduct.productRecord.IsActive){
-                listProductToInsert.add(forProduct.productRecord);
-                listPricebookEntryToInsert.add(forProduct.pricebookEntryRecord);
+                Product2 p = forProduct.productRecord;
+                listProductToInsert.add(p);
+
+                PricebookEntry pbe = forProduct.pricebookEntryRecord;
+                pbe.Pricebook2Id = Constants.STANDARD_PRICEBOOK_ID;
+                pbe.IsActive = true;
+                listPricebookEntryToInsert.add(pbe);
             }
         }
 
@@ -69,6 +74,18 @@ public without sharing class Product2Extension {
         }
         
         return null;
+    }
+
+    public class ProductWrapper{
+    
+        public Product2 productRecord {get; set;}
+        public PricebookEntry pricebookEntryRecord {get; set;}
+    
+        public ProductWrapper(){
+            productRecord = new Product2();
+            pricebookEntryRecord = new PricebookEntry();
+        }
+    
     }
 
 }
