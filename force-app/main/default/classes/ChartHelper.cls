@@ -1,4 +1,4 @@
-public class ChartHelper {
+public without sharing class ChartHelper {
 
     @AuraEnabled
     public static List<chartData> GetInventory(){
