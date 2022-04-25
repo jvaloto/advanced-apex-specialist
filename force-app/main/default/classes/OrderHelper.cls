@@ -14,9 +14,6 @@ public class OrderHelper {
             if(newList[i].Status == Constants.ACTIVATED_ORDER_STATUS && newList[i].Status != oldList[i].Status){
                 setIdOrderToFilter.add(newList[i].Id);
             }
-            // if(newList[i].ActivatedDate != null && newList[i].ActivatedDate != oldList[i].ActivatedDate){
-            //     setIdOrderToFilter.add(newList[i].Id);
-            // }
         }
 
         RollUpOrderItems(setIdOrderToFilter);
@@ -29,18 +26,6 @@ public class OrderHelper {
      * @return void
     **/
     public static void RollUpOrderItems(Set<Id> activatedOrderIds){
-        //ToDo: Declare a Map named "productMap" of Ids to Product2 records
-
-        //ToDo: Loop through a query of OrderItems related to the activatedOrderIds
-
-            //ToDo: Populate the map with the Id of the related Product2 as the key and Product2 record as the value
-
-        //ToDo: Loop through a query that aggregates the OrderItems related to the Products in the ProductMap keyset
-
-        //ToDo: Perform an update on the records in the productMap
-
-
-
         if(!activatedOrderIds.isEmpty()){
             Set<Id> setIdProductToFilter = new Set<Id>();
             List<Product2> listProductToUpdate = new List<Product2>();

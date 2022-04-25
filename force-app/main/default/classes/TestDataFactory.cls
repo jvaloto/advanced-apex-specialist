@@ -159,4 +159,12 @@ public with sharing class TestDataFactory {
         insert listOrderItem;
     }
 
+    /**
+     * @description step 6
+    **/
+    public static void VerifyQuantityOrdered(Product2 originalProduct, Product2 updatedProduct, Integer qtyOrdered){
+        System.assertNotEquals(updatedProduct.Quantity_Ordered__c, originalProduct.Quantity_Ordered__c);
+        System.assertEquals(updatedProduct.Quantity_Ordered__c, qtyOrdered);
+    }
+
 }

@@ -36,7 +36,7 @@
                         <apex:outputLabel value="{!$ObjectType.Product2.Fields.Family.label}" />
                         <apex:selectList value="{!selectedFamily}" size="1" >
                             <apex:selectOptions value="{!familyOptions}" />
-                            <apex:actionSupport action="{!selectFamily}" event="onchange" reRender="pageMessages, pagination, orderItemTable" />
+                            <apex:actionSupport action="{!selectFamily}" event="onchange" reRender="pageMessages, pagination, orderItemTable, summary" />
                         </apex:selectList>
                     </apex:pageBlockSectionItem>
                 </apex:pageBlockSection>
