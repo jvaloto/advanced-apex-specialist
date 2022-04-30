@@ -4,7 +4,6 @@
 **/
 public class OrderExtension {
 
-    public Id orderId;
     public Order orderRecord {get;set;}
     public List<OrderItem> orderItemList {get;set;}
     public String selectedFamily {get;set;}
@@ -15,14 +14,77 @@ public class OrderExtension {
     ApexPages.StandardSetController standardSetController;
 
     public OrderExtension(ApexPages.StandardController standardController){
-        orderId = standardController.getId();
+        orderRecord = (Order) standardController.getRecord();
 
+        selectedFamily = Constants.SELECT_ONE;
+
+        orderItemMap = new Map<Id, OrderItem>();
+        
         updateOrderData();
     }
+    
+    public void updateOrderData(){
+        if(orderRecord.Id == null){
+            orderRecord = new Order();
+            orderRecord.Pricebook2Id = Constants.STANDARD_PRICEBOOK_ID;
+        }else{
+            orderRecord = queryOrderRecord(orderRecord.Id);
 
-    private void updateOrderData(){
-        orderRecord = queryOrderRecord(orderId, selectedFamily);
-        orderItemList = orderRecord.OrderItems;
+            orderItemList = orderRecord.OrderItems;
+            
+            for(OrderItem forOrderItem : orderItemList){
+                orderItemMap.put(forOrderItem.Product2Id, forOrderItem);
+            }
+        }
+
+        getQueryOrderItems();
+    }
+
+    public void getQueryOrderItems(){
+        String query =
+            'SELECT Id '+
+                ' , Name '+
+                ' , Product2.Family '+
+                ' , Product2.Name '+
+                ' , Product2.Quantity_Remaining__c  '+
+                ' , Product2Id '+
+                ' , UnitPrice '+
+            ' FROM PricebookEntry '+
+            ' WHERE IsActive = true ';
+            
+        if(String.isNotEmpty(selectedFamily) && selectedFamily != Constants.SELECT_ONE){
+            query += ' AND Product2.Family =: selectedFamily ';
+        }
+
+        standardSetController = new ApexPages.StandardSetController(Database.getQueryLocator(query));
+        
+        standardSetController.setPageSize(Constants.DEFAULT_ROWS);
+
+        createOrderItems();
+    }
+
+    public void createOrderItems(){
+        orderItemList = new List<OrderItem>();
+
+        for(sObject forSObject : standardSetController.getRecords()){
+            PricebookEntry pricebookEntryData = (PricebookEntry) forSObject;
+
+            OrderItem orderItemToAdd;
+
+            if(orderItemMap.containsKey(pricebookEntryData.Product2Id)){
+                orderItemToAdd = orderItemMap.get(pricebookEntryData.Product2Id);
+            }else{
+                orderItemToAdd = new OrderItem();
+                orderItemToAdd.PricebookEntryId = pricebookEntryData.Id;
+                orderItemToAdd.Product2 = pricebookEntryData.Product2;
+                orderItemToAdd.Product2Id = pricebookEntryData.Product2Id;
+                orderItemToAdd.Quantity = 0;
+                orderItemToAdd.UnitPrice = pricebookEntryData.UnitPrice;
+            }
+            
+            orderItemList.add(orderItemToAdd);
+            orderItemMap.put(pricebookEntryData.Product2Id, orderItemToAdd);
+        }
 
         OnFieldChange();
     }
@@ -33,26 +95,11 @@ public class OrderExtension {
     **/
     public void OnFieldChange(){
         total = 0;
-
-        Map<String, Decimal> mapTotal = new Map<String, Decimal>();
-
-        for(OrderItem forOrderItem : orderItemList){
-            String groupBy = forOrderItem.Product2.Name;
-            Decimal totalItem = forOrderItem.Quantity * forOrderItem.UnitPrice;
-
-            total += totalItem;
-
-            if(mapTotal.containsKey(groupBy)){
-                mapTotal.put(groupBy, mapTotal.get(groupBy) + totalItem);
-            }else{
-                mapTotal.put(groupBy, 0);
-            }
-        }
-
         pieData = new List<ChartHelper.ChartData>();
 
-        for(String forString : mapTotal.keySet()){
-            pieData.add(new ChartHelper.ChartData(forString, mapTotal.get(forString)));
+        for(OrderItem forOrderItem : orderItemMap.values()){
+            pieData.add(new ChartHelper.ChartData(forOrderItem.Product2.Name, forOrderItem.Quantity * forOrderItem.UnitPrice));
+            total += forOrderItem.Quantity * forOrderItem.UnitPrice;
         }
     }
 
@@ -61,7 +108,7 @@ public class OrderExtension {
      * @description
     **/
     public void SelectFamily(){
-        updateOrderData();
+        getQueryOrderItems();
     }
 
     /**
@@ -71,16 +118,30 @@ public class OrderExtension {
     public void Save(){
         Savepoint sp = Database.setSavepoint();
 
+        try{
+            upsert orderRecord;
+        }catch(Exception e){
+            System.debug(e.getMessage());
+
+            Database.rollback(sp);
+        }
+
         List<OrderItem> listOrderItemToUpdate = new List<OrderItem>();
+        List<OrderItem> listOrderItemToDelete = new List<OrderItem>();
 
         for(OrderItem forOrderItem : orderItemList){
             if(forOrderItem.Quantity > 0){
+                if(forOrderItem.OrderId == null) forOrderItem.OrderId = orderRecord.Id;
+
                 listOrderItemToUpdate.add(forOrderItem);
+            }else if(forOrderItem.Id != null){
+                listOrderItemToDelete.add(forOrderItem);
             }
         }
 
         try{
-            update listOrderItemToUpdate;
+            upsert listOrderItemToUpdate;
+            delete listOrderItemToDelete;
         }catch(Exception e){
             System.debug(e.getMessage());
 
@@ -94,7 +155,9 @@ public class OrderExtension {
      * @description
     **/
     public void First(){
-
+        standardSetController.first();
+        
+        createOrderItems();
     }
 
 
@@ -103,7 +166,9 @@ public class OrderExtension {
      * @description
     **/
     public void Next(){
-
+        standardSetController.next();
+        
+        createOrderItems();
     }
 
 
@@ -112,7 +177,9 @@ public class OrderExtension {
      * @description
     **/
     public void Previous(){
-
+        standardSetController.previous();
+        
+        createOrderItems();
     }
 
     /**
@@ -120,7 +187,9 @@ public class OrderExtension {
      * @description
     **/
     public void Last(){
-
+        standardSetController.last();
+        
+        createOrderItems();
     }
 
     /**
@@ -128,7 +197,7 @@ public class OrderExtension {
      * @description
     **/
     public Boolean GetHasPrevious(){
-        return null;
+        return standardSetController.getHasPrevious();
     }
 
     /**
@@ -136,7 +205,7 @@ public class OrderExtension {
      * @description
     **/
     public Boolean GetHasNext(){
-        return null;
+        return standardSetController.getHasNext();
     }
 
     /**
@@ -144,7 +213,7 @@ public class OrderExtension {
      * @description
     **/
     public Integer GetTotalPages(){
-        return null;
+        return (Integer) Math.ceil((Decimal) standardSetController.getResultSize() / (Decimal) Constants.DEFAULT_ROWS);
     }
 
     /**
@@ -152,7 +221,7 @@ public class OrderExtension {
      * @description
     **/
     public Integer GetPageNumber(){
-        return null;
+        return standardSetController.getPageNumber();
     }
 
     /**
@@ -175,14 +244,13 @@ public class OrderExtension {
      * @name QueryOrderRecord
      * @description
     **/
-    public static Order QueryOrderRecord(Id orderId, String pFamily){
+    public static Order QueryOrderRecord(Id orderId){
         return [
             SELECT Id, AccountId, EffectiveDate, Name, Status, Pricebook2Id,
                 (
                     SELECT Id, OrderId, Quantity, UnitPrice, PricebookEntryId, Product2Id,
                          Product2.Name, Product2.Family, Product2.Quantity_Remaining__c
                     FROM OrderItems
-                    WHERE Product2.Family =: pFamily
                 )
             FROM Order
             WHERE Id = :orderId
