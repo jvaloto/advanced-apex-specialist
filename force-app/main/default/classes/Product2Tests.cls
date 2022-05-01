@@ -57,4 +57,21 @@ private class Product2Tests {
         }
     }
 
+    public static testMethod void Product2Trigger_UnitTest(){
+        Product2 productData = 
+            [SELECT Id
+                , Quantity_Remaining__c
+                , Quantity_Ordered__c
+            FROM Product2
+            WHERE Name = 'Product Test 0'];
+
+        productData.Quantity_Ordered__c = 100;
+
+        Test.startTest();
+
+        update productData;
+
+        Test.stopTest();
+    }
+
 }

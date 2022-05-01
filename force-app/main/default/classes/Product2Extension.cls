@@ -1,3 +1,8 @@
+/**
+ * This class has changed because the step 9 with this error:
+ * Please ensure that product2Extension and its methods are still working as specified in the earlier challenge
+ */
+
 public without sharing class Product2Extension {
 
     public List<ProductWrapper> productsToInsert {get;set;}
@@ -28,28 +33,31 @@ public without sharing class Product2Extension {
     public List<ChartHelper.ChartData> GetInventory(){
         return ChartHelper.GetInventory();
     }
-
+    
     public PageReference Save(){
         Savepoint sp = Database.setSavepoint();
 
-        List<Product2> listProductToInsert = new List<Product2>();
-        List<PricebookEntry> listPricebookEntryToInsert = new List<PricebookEntry>();
-
-        for(ProductWrapper forProduct : productsToInsert){
-            if(String.isNotBlank(forProduct.productRecord.Name)
-            && String.isNotBlank(forProduct.productRecord.Family)
-            && forProduct.productRecord.Family != Constants.SELECT_ONE
-            && forProduct.productRecord.Initial_Inventory__c != null
-            && forProduct.productRecord.Initial_Inventory__c > 0
-            && forProduct.pricebookEntryRecord.UnitPrice != null
-            && forProduct.pricebookEntryRecord.UnitPrice > 0
-            && forProduct.productRecord.IsActive){
-                listProductToInsert.add(forProduct.productRecord);
-                listPricebookEntryToInsert.add(forProduct.pricebookEntryRecord);
-            }
-        }
-
         try {
+            List<Product2> listProductToInsert = new List<Product2>();
+            List<PricebookEntry> listPricebookEntryToInsert = new List<PricebookEntry>();
+
+            for(ProductWrapper forProduct : productsToInsert){
+                if(null != forProduct.productRecord
+                && null != forProduct.pricebookEntryRecord){
+                    if(null != forProduct.productRecord.Name
+                    && null != forProduct.productRecord.Family
+                    && Constants.SELECT_ONE != forProduct.productRecord.Family
+                    && null != forProduct.productRecord.Initial_Inventory__c
+                    && null != forProduct.pricebookEntryRecord.UnitPrice){
+                        forProduct.pricebookEntryRecord.Pricebook2Id = Constants.STANDARD_PRICEBOOK_ID;
+                        forProduct.pricebookEntryRecord.IsActive = true;
+
+                        listProductToInsert.add(forProduct.productRecord);
+                        listPricebookEntryToInsert.add(forProduct.pricebookEntryRecord);
+                    }
+                }
+            }
+        
             insert listProductToInsert;
 
             for(Integer i = 0; i < listProductToInsert.size(); i ++){
@@ -72,17 +80,14 @@ public without sharing class Product2Extension {
     }
 
     public class ProductWrapper{
-    
-    public Product2 productRecord {get; set;}
-    public PricebookEntry pricebookEntryRecord {get; set;}
+        public Product2 productRecord {get; set;}
+        public PricebookEntry pricebookEntryRecord {get; set;}
 
-    public ProductWrapper(){
-        productRecord = new Product2();
-        productRecord.Initial_Inventory__c = 0;
+        public ProductWrapper(){
+            productRecord = new Product2();
 
-        pricebookEntryRecord = new PricebookEntry();
-        pricebookEntryRecord.Pricebook2Id = Constants.STANDARD_PRICEBOOK_ID;
-        pricebookEntryRecord.IsActive = true;
+            pricebookEntryRecord = new PricebookEntry();
+        }
     }
 
 }
